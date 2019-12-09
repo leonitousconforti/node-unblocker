@@ -1,10 +1,12 @@
 var URL = require('url'),
     test = require('tap').test,
-    _ = require('lodash');
-    // concat = require('concat-stream');
+    _ = require('lodash'),
+    concat = require('concat-stream');
 
 var urlPrefix = require('../lib/url-prefixer.js')({
-    prefix: '/proxy/'
+    prefix: '/proxy/',
+    proxyWebSockets: true,
+    websocketServer: 'wss://proxytest.com'
 });
 
 var testLines = {
@@ -101,11 +103,13 @@ var testLines = {
     '<button formaction="">': '<button formaction="">',
     '<button formaction="/mytarget">': '<button formaction="/proxy/http://localhost:8081/mytarget">',
     '<button formaction="mytarget.php">': '<button formaction="mytarget.php">',
+};
 
-    'var ws = new WebSocket(a(b));': 'var ws = new WebSocket(\"http://localhost:8081/proxy/wss://\" + a(b));',
-    'let fnjn = new WebSocket(\"185.165.15.5/ptc\");': 'let fnjn = new WebSocket(\"http://localhost:8081/proxy/wss://\" + "185.165.15.5/ptc");',
-    'var c = new WebSocket(B(a));': 'var c = new WebSocket(\"http://localhost:8081/proxy/wss://\" + B(a));',
-    'function(a){var c=new WebSocket(B(a));c.binaryType=': 'function(a){var c=new WebSocket(\"http://localhost:8081/proxy/wss://\" + B(a));c.binaryType='
+var jsTestLines = {
+    'var ws = new WebSocket(a(b));': 'var ws = new WebSocket(\"wss://proxytest.com/proxy/\" + a(b));',
+    'let fnjn = new WebSocket(\"wss://185.165.15.5/ptc\");': 'let fnjn = new WebSocket(\"wss://proxytest.com/proxy/\" + "wss://185.165.15.5/ptc");',
+    'var c = new WebSocket(B(a));': 'var c = new WebSocket(\"wss://proxytest.com/proxy/\" + B(a));',
+    'function(a){var c=new WebSocket(B(a));c.binaryType=': 'function(a){var c = new WebSocket(\"wss://proxytest.com/proxy/\" + B(a));c.binaryType='
 };
 
 var testUri = URL.parse('http://localhost:8081/');
@@ -116,35 +120,39 @@ test("should rewrite (or not rewrite) various strings correctly", function(t) {
         var actual = urlPrefix.rewriteUrls(source, testUri, testPrefix);
         t.equal(actual, expected, "Should rewrite '" + source + "' to '" + expected + '"');
     });
+
+    _.each(jsTestLines, function(expected, source) {
+        var actual = urlPrefix.rewriteUrls(source, testUri, testPrefix);
+        t.equal(actual, expected, "Should rewrite '" + source + "' to '" + expected + '"');
+    });
     t.end();
 });
 
+test("should correctly handle packets split at different locations", function(t) {
+    var fullSource = _.keys(testLines).join('\n'),
+        expected = _.values(testLines).join('\n');
 
-// test("should correctly handle packets split at different locations", function(t) {
-//     var fullSource = _.keys(testLines).join('\n'),
-//         expected = _.values(testLines).join('\n');
+    function createSubTest(start, end) {
+        // this causes the following warning:
+        // (node) warning: Recursive process.nextTick detected. This will break in the next version of node. Please use setImmediate for recursive deferral.
+        //t.test("Should handle breaks between '" + start.substr(-20) + "' and '" + end.substr(0,20) + "' correctly", function(t) {
+        var stream = urlPrefix.createStream(testUri);
+        stream.setEncoding('utf8');
+        stream.pipe(concat(function(actual) {
+            t.equal(actual, expected, "Should handle chunk breaks between '" + start.substr(-20) + "' and '" + end.substr(0, 20) + "' correctly");
+            if (actual != expected) throw "stopping early";
+        }));
+        stream.write(start);
+        stream.end(end);
+        //});
+    }
 
-//     function createSubTest(start, end) {
-//         // this causes the following warning:
-//         // (node) warning: Recursive process.nextTick detected. This will break in the next version of node. Please use setImmediate for recursive deferral.
-//         //t.test("Should handle breaks between '" + start.substr(-20) + "' and '" + end.substr(0,20) + "' correctly", function(t) {
-//         var stream = urlPrefix.createStream(testUri);
-//         stream.setEncoding('utf8');
-//         stream.pipe(concat(function(actual) {
-//             t.equal(actual, expected, "Should handle chunk breaks between '" + start.substr(-20) + "' and '" + end.substr(0, 20) + "' correctly");
-//             if (actual != expected) throw "stopping early";
-//         }));
-//         stream.write(start);
-//         stream.end(end);
-//         //});
-//     }
-
-//     t.plan(fullSource.length);
-//     for (var splitLocation = 0, l = fullSource.length; splitLocation < l; splitLocation++) {
-//         var start = fullSource.substr(0, splitLocation);
-//         var end = fullSource.substr(splitLocation);
-//         createSubTest(start, end);
-//     }
-// });
+    t.plan(fullSource.length);
+    for (var splitLocation = 0, l = fullSource.length; splitLocation < l; splitLocation++) {
+        var start = fullSource.substr(0, splitLocation);
+        var end = fullSource.substr(splitLocation);
+        createSubTest(start, end);
+    }
+});
 
 // todo: add tests for javascript (?)
