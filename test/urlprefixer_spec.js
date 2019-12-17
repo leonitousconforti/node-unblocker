@@ -6,7 +6,7 @@ var URL = require('url'),
 var urlPrefix = require('../lib/url-prefixer.js')({
     prefix: '/proxy/',
     proxyWebSockets: true,
-    websocketServer: 'wss://proxytest.com'
+    websocketServer: 'ws://proxytest.com'
 });
 
 var testLines = {
@@ -106,14 +106,16 @@ var testLines = {
 };
 
 var jsTestLines = {
-    'var ws = new WebSocket(a(b));': 'var ws = new WebSocket(\"wss://proxytest.com/proxy/\" + a(b));',
-    'let fnjn = new WebSocket(\"wss://185.165.15.5/ptc\");': 'let fnjn = new WebSocket(\"wss://proxytest.com/proxy/\" + "wss://185.165.15.5/ptc");',
-    'var c = new WebSocket(B(a));': 'var c = new WebSocket(\"wss://proxytest.com/proxy/\" + B(a));',
-    'function(a){var c=new WebSocket(B(a));c.binaryType=': 'function(a){var c = new WebSocket(\"wss://proxytest.com/proxy/\" + B(a));c.binaryType='
+    'var ws = new WebSocket(a(b));': 'var ws = new WebSocket(\"ws://proxytest.com/proxy/\" + a(b));',
+    'let fnjn = new WebSocket(\"wss://185.165.15.5/ptc\");': 'let fnjn = new WebSocket(\"ws://proxytest.com/proxy/\" + "wss://185.165.15.5/ptc");',
+    'var c = new WebSocket(B(a));': 'var c = new WebSocket(\"ws://proxytest.com/proxy/\" + B(a));',
+    'function(a){var c=new WebSocket(B(a));c.binaryType=': 'function(a){var c = new WebSocket(\"ws://proxytest.com/proxy/\" + B(a));c.binaryType=',
+    'this.destroyed || (this.webSocket = new WebSocket(this.url), this.webSocket.onopen = function () {': 'this.destroyed || (this.webSocket = new WebSocket(\"ws://proxytest.com/proxy/\" + this.url), this.webSocket.onopen = function () {'
 };
 
-var testUri = URL.parse('http://localhost:8081/');
-var testPrefix = '/proxy/';
+var testUri = URL.parse('http://localhost:8081/'),
+    testPrefix = '/proxy/',
+    testwebsocketServer = 'ws://proxytest.com';
 
 test("should rewrite (or not rewrite) various strings correctly", function(t) {
     _.each(testLines, function(expected, source) {
@@ -122,7 +124,7 @@ test("should rewrite (or not rewrite) various strings correctly", function(t) {
     });
 
     _.each(jsTestLines, function(expected, source) {
-        var actual = urlPrefix.rewriteUrls(source, testUri, testPrefix);
+        var actual = urlPrefix.rewriteWebsockets(source, testPrefix, testwebsocketServer);
         t.equal(actual, expected, "Should rewrite '" + source + "' to '" + expected + '"');
     });
     t.end();
