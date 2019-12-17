@@ -10,9 +10,9 @@ fastest web proxies available.
 [![Dependency Status](https://david-dm.org/nfriedly/node-unblocker.svg)](https://david-dm.org/nfriedly/node-unblocker)
 [![npm-version](https://img.shields.io/npm/v/unblocker.svg)](https://www.npmjs.com/package/unblocker)
 
-### Trying to add websocket support |*-*|
+### Trying to add websocket support (¬_¬)
 
-very buggy and barely works right now, all be it semi functional.
+very buggy and barely works right now, all be it semi functional. Real credit to [nfriedly](https://github.com/nfriedly/nodeunblocker.com)
 
 ### The magic part
 
