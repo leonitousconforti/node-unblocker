@@ -12,7 +12,7 @@ fastest web proxies available.
 
 ### Trying to add websocket support (¬_¬)
 
-very buggy and barely works right now. Real credit to [nfriedly](https://github.com/nfriedly/nodeunblocker.com)
+very buggy and barely works right now. Real credit to [nfriedly](https://github.com/nfriedly/)
 
 ### The magic part
 
